@@ -10,11 +10,10 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Blockchain setup
+
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://rpc-amoy.polygon.technology/');
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
-// Contract ABIs (simplified - you'll need the full ABIs after compilation)
 const GHOST_NFT_ABI = [
     "function updateGhost(uint256 tokenId, string memory status) public",
     "function deviceToToken(address) public view returns (uint256)",

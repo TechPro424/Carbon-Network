@@ -1,0 +1,14 @@
+console.log("✅ DONE! GameLogic is now the owner.");
+await nft.transferOwnership(gameLogicAddress);
+console.log("Transferring ownership to GameLogic...");
+// 3. Transfer Keys
+const nft = await ethers.getContractAt("CarbonGhostNFT", nftAddress);
+// 2. Get Contract
+const gameLogicAddress = process.env.GAME_LOGIC_ADDRESS;
+const nftAddress = process.env.GHOST_NFT_ADDRESS;
+// 1. Setup - Paste your NEW addresses from .env here
+await oracle2.setCarbonIntensity(450);
+await oracle2.carbonIntensity();
+const oracle2 = await ethers.getContractAt("CarbonIntensityOracle", process.env.ORACLE_ADDRESS);
+const oracle = await ethers.getContractAt("CarbonIntensityOracle", process.env.ORACLE_ADDRESS);
+const oracle = await ethers.getContractAt("CarbonIntensityOracle", "PASTE_ADDRESS_HERE");
