@@ -1,3 +1,4 @@
+import cors from 'cors';
 import express from 'express';
 import crypto from 'node:crypto';
 import { ethers } from 'ethers';
@@ -6,6 +7,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
+app.use(cors());
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -15,10 +17,16 @@ const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'https://rpc-
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
 const GHOST_NFT_ABI = [
-    "function updateGhost(uint256 tokenId, string memory status) public",
-    "function deviceToToken(address) public view returns (uint256)",
-    "function getGhost(uint256 tokenId) public view returns (tuple(uint256 health, string mood, uint256 lastUpdate, address deviceOwner))"
+    // ERC721
+    "function balanceOf(address owner) view returns (uint256)",
+    "function ownerOf(uint256 tokenId) view returns (address)",
+
+    // Your contract
+    "function updateGhost(uint256 tokenId, string memory status)",
+    "function deviceToToken(address) view returns (uint256)",
+    "function getGhost(uint256 tokenId) view returns (tuple(uint256 health, string mood, uint256 lastUpdate, address deviceOwner))"
 ];
+
 
 const GAME_LOGIC_ABI = [
     "function processReading(address device, uint256 tokenId, string memory gridStatus) public",
@@ -99,9 +107,14 @@ app.post('/reading', async (req, res) => {
         // 3. Get token ID for this device
         const tokenId = await ghostNFT.deviceToToken(deviceAddress);
         
-        if (tokenId.toString() === '0') {
-            return res.status(404).json({ error: 'No ghost NFT found for this device' });
-        }
+        // Check ownership instead
+try {
+    await ghostNFT.ownerOf(tokenId);
+} catch {
+    return res.status(404).json({ error: 'No ghost NFT found for this device' });
+}
+
+
         
         console.log('Ghost NFT ID:', tokenId.toString());
         
@@ -148,9 +161,11 @@ app.get('/ghost/:deviceAddress', async (req, res) => {
         
         const tokenId = await ghostNFT.deviceToToken(deviceAddress);
         
-        if (tokenId.toString() === '0') {
-            return res.status(404).json({ error: 'No ghost found' });
-        }
+       try {
+    await ghostNFT.ownerOf(tokenId);
+} catch {
+    return res.status(404).json({ error: 'No ghost NFT found for this device' });
+}
         
         const ghost = await ghostNFT.getGhost(tokenId);
         const deposit = await gameLogic.getDeposit(deviceAddress);
