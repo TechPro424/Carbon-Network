@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 //import { ethers } from 'ethers';
-import GhostViewer from '../GhostViewer';
+import GhostViewer from "./GhostViewer.jsx";
 import './App.css';
 
 function App() {

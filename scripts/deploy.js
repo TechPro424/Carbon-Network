@@ -1,76 +1,78 @@
-import hre from "hardhat";
+// scripts/deploy.js
+
+const hre = require("hardhat");
 
 async function main() {
-  const [deployer] = await hre.ethers.getSigners();
-
-  console.log("\n🚀 Deploying Seasonal Contracts...");
-  console.log("-----------------------------------");
-  console.log("Deploying with account:", deployer.address);
-  console.log("Account balance:", (await hre.ethers.provider.getBalance(deployer.address)).toString());
-
-  // 1. Deploy Oracle (Chainlink Functions Version)
-  console.log("\n📄 Deploying CarbonIntensityOracle...");
-
-  // POLYGON AMOY CONSTANTS
-  const routerAddress = "0xC22a79eBA640940ABB6dF0f7982cc119578E11De";
-  const donId = "0x66756e2d706f6c79676f6e2d616d6f792d310000000000000000000000000000";
-  const subscriptionId = 0; // We use 0 for now (you can set a real one later)
-
-  const Oracle = await hre.ethers.getContractFactory("CarbonIntensityOracle");
-
-  // Pass the 3 required arguments to the constructor
-  const oracle = await Oracle.deploy(routerAddress, subscriptionId, donId);
-
-  await oracle.waitForDeployment();
-  const oracleAddress = oracle.target || oracle.address;
-  console.log("✓ Oracle deployed to:", oracleAddress);
-
-  // 2. Deploy NFT
-  console.log("\n👻 Deploying CarbonGhostNFT...");
-  const NFT = await hre.ethers.getContractFactory("CarbonGhostNFT");
-  const nft = await NFT.deploy();
-  await nft.waitForDeployment();
-  const nftAddress = nft.target || nft.address;
-  console.log("✓ NFT deployed to:", nftAddress);
-
-  // 3. Deploy GameLogic (Linked to NFT)
-  console.log("\n🎮 Deploying GameLogic...");
-  const GameLogic = await hre.ethers.getContractFactory("GameLogic");
-  const gameLogic = await GameLogic.deploy(nftAddress);
-  await gameLogic.waitForDeployment();
-  const gameLogicAddress = gameLogic.target || gameLogic.address;
-  console.log("✓ Game Logic deployed to:", gameLogicAddress);
-
-  // // 4. THE FIX: Automatic Ownership Transfer
-  // console.log("\n🔐 Setting up permissions...");
-  // try {
-  //     // The GameLogic contract must own the NFT contract to update its stats
-  //     const tx = await nft.transferOwnership(gameLogicAddress);
-  //     console.log("⏳ Waiting for ownership transfer...");
-  //     await tx.wait();
-  //
-  //     // Verify it worked
-  //     const newOwner = await nft.owner();
-  //     if (newOwner === gameLogicAddress) {
-  //         console.log("✅ SUCCESS: Ownership transferred to GameLogic");
-  //     } else {
-  //         console.log("❌ FAILED: Owner is still", newOwner);
-  //     }
-  // } catch (error) {
-  //     console.error("❌ CRITICAL ERROR during ownership transfer:");
-  //     console.error(error);
-  // }
-
-  // 5. Print Final Config for .env
-  console.log("\n📝 UPDATE YOUR .ENV FILE WITH THESE VALUES:");
-  console.log("-----------------------------------");
-  console.log(`ORACLE_ADDRESS=${oracleAddress}`);
-  console.log(`GHOST_NFT_ADDRESS=${nftAddress}`);
-  console.log(`GAME_LOGIC_ADDRESS=${gameLogicAddress}`);
-  console.log("-----------------------------------");
+    console.log("🚀 Deploying Carbon Ghost Power-Weighted System...\n");
+    
+    // Get deployer
+    const [deployer] = await hre.ethers.getSigners();
+    console.log("📝 Deploying with account:", deployer.address);
+    
+    const balance = await hre.ethers.provider.getBalance(deployer.address);
+    console.log("💰 Account balance:", hre.ethers.formatEther(balance), "MATIC\n");
+    
+    // 1. Deploy Oracle
+    console.log("1️⃣  Deploying CarbonIntensityOracle...");
+    const Oracle = await hre.ethers.getContractFactory("CarbonIntensityOracle");
+    const oracle = await Oracle.deploy();
+    await oracle.waitForDeployment();
+    const oracleAddress = await oracle.getAddress();
+    console.log("✅ Oracle deployed to:", oracleAddress);
+    
+    // Set initial carbon intensity
+    const setIntensityTx = await oracle.setCarbonIntensity(250); // Clean by default
+    await setIntensityTx.wait();
+    console.log("✅ Initial carbon intensity set to 250 gCO2/kWh (CLEAN)\n");
+    
+    // 2. Deploy NFT
+    console.log("2️⃣  Deploying CarbonGhostNFT...");
+    const NFT = await hre.ethers.getContractFactory("CarbonGhostNFT");
+    const nft = await NFT.deploy();
+    await nft.waitForDeployment();
+    const nftAddress = await nft.getAddress();
+    console.log("✅ NFT deployed to:", nftAddress, "\n");
+    
+    // 3. Deploy Game Logic
+    // Integration interval: ~107 calculations per month
+    // Polygon: ~43,200 blocks/day = ~1,296,000 blocks/month
+    // 1,296,000 / 107 ≈ 12,112 blocks between calculations
+    const integrationInterval = 12112; // For Polygon
+    
+    console.log("3️⃣  Deploying GameLogic...");
+    console.log("📊 Integration interval:", integrationInterval, "blocks (~107 times/month)");
+    const GameLogic = await hre.ethers.getContractFactory("GameLogic");
+    const gameLogic = await GameLogic.deploy(nftAddress, integrationInterval);
+    await gameLogic.waitForDeployment();
+    const gameLogicAddress = await gameLogic.getAddress();
+    console.log("✅ GameLogic deployed to:", gameLogicAddress, "\n");
+    
+    // 4. Set permissions
+    console.log("4️⃣  Setting up permissions...");
+    const transferOwnershipTx = await nft.transferOwnership(gameLogicAddress);
+    await transferOwnershipTx.wait();
+    console.log("✅ NFT ownership transferred to GameLogic\n");
+    
+    // 5. Print summary
+    console.log("📋 Deployment Summary");
+    console.log("═══════════════════════════════════════");
+    console.log("Oracle Address:     ", oracleAddress);
+    console.log("NFT Address:        ", nftAddress);
+    console.log("GameLogic Address:  ", gameLogicAddress);
+    console.log("Integration Interval:", integrationInterval, "blocks");
+    console.log("═══════════════════════════════════════\n");
+    
+    console.log("📝 Add these to your .env file:");
+    console.log(`ORACLE_ADDRESS=${oracleAddress}`);
+    console.log(`GHOST_NFT_ADDRESS=${nftAddress}`);
+    console.log(`GAME_LOGIC_ADDRESS=${gameLogicAddress}\n`);
+    
+    console.log("✅ Deployment complete!");
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main()
+    .then(() => process.exit(0))
+    .catch((error) => {
+        console.error(error);
+        process.exit(1);
+    });
