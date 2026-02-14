@@ -1,3 +1,5 @@
+For the frontend, see https://github.com/SJay-47/Carbon-Network-Frontend
+
 # 👻 Carbon Ghost - Hackathon Implementation Guide
 
 ## 🎯 What This Is
